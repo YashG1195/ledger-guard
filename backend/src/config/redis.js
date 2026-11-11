@@ -59,3 +59,4 @@ export async function disconnectRedis() {
     logger.info('Redis disconnected');
   }
 }
+

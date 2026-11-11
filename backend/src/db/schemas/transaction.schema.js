@@ -137,3 +137,4 @@ TransactionSchema.virtual('amountDecimal').get(function () {
 });
 
 export default TransactionSchema;
+
