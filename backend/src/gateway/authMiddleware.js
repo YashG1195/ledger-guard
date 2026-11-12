@@ -18,10 +18,6 @@ function getPublicKey() {
   return publicKey;
 }
 
-/**
- * Verifies the Bearer JWT in Authorization header.
- * Sets req.user = decoded payload on success.
- */
 export const authenticate = asyncHandler(async (req, _res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -31,7 +27,7 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
   const token = authHeader.slice(7);
   try {
     req.user = jwt.verify(token, getPublicKey(), { algorithms: ['RS256'] });
-    req.log.debug({ sub: req.user.sub }, 'JWT verified');
+    req.log.debug({ sub: req.user.sub }, 'jwt authenticated');
     next();
   } catch (err) {
     throw new UnauthorizedError(

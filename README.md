@@ -1,70 +1,90 @@
 # LedgerGuard
 
-LedgerGuard is an enterprise-grade multi-tenant financial ledger and billing engine built with Node.js 20, Express, MongoDB, and Redis. It is engineered for transaction integrity, strict tenant isolation, distributed locking, and real-time observability.
+LedgerGuard is a multi-tenant double-entry ledger and billing API built on Node.js, Express, MongoDB, and Redis. It provides transactional accounting, idempotency protection for payment/billing events, tenant-scoped data isolation, and real-time transaction feeds.
 
----
+## Requirements
 
-## ⚡ Tech Stack
+- Node.js 20+
+- MongoDB 6+
+- Redis 7+
 
-- **Runtime & Framework:** Node.js 20, Express 5
-- **Databases:** MongoDB (via Mongoose), Redis (via ioredis)
-- **Concurrency & Idempotency:** Redlock (distributed locks), Redis-backed idempotency cache
-- **Security & Cryptography:** RS256 JWT authentication, RSA key signing/verification, Helmet, CORS
-- **Validation & Parsing:** Zod (runtime env and schema validation)
-- **Logging & Tracing:** Pino with per-request correlation IDs (`X-Request-Id`)
-- **Real-Time:** Socket.io with tenant-scoped event channels
-- **Testing:** Jest, Supertest
+## Tech Stack
 
----
+- **Runtime & API**: Node.js, Express 5
+- **Datastores**: MongoDB (via Mongoose), Redis (via ioredis)
+- **Locking & Idempotency**: Redlock for distributed concurrency control, Redis key-value cache with TTL
+- **Auth & Crypto**: RS256 JWT tokens, asymmetric RSA request signature verification
+- **Validation**: Zod
+- **Logging**: Pino with per-request correlation IDs (`X-Request-Id`)
+- **Realtime**: Socket.io with tenant rooms
+- **Test Runner**: Jest, Supertest
 
-## 📁 Project Structure
+## Directory Layout
 
 ```
 ledger-guard/
 ├── backend/
-│   ├── keys/                  # RSA key pairs (gitignored)
+│   ├── keys/             # RSA private/public keys (gitignored)
 │   ├── src/
-│   │   ├── config/            # env.js (Zod-validated env), redis.js (ioredis + Redlock)
-│   │   ├── gateway/           # authMiddleware, tenantMiddleware, errorHandler
-│   │   ├── db/                # connectionManager.js, schemas/ (Mongoose)
-│   │   ├── ledger/            # routes, controller, service, idempotency, schemas
-│   │   ├── analytics/         # aggregation service, routes, controller
-│   │   ├── crypto/            # RSA key loader, digital signature helpers
-│   │   ├── realtime/          # Socket.io connection and tenant room handlers
-│   │   ├── utils/             # logger, errors, asyncHandler, requestId, response
-│   │   ├── app.js             # Express app setup and middleware pipeline
-│   │   └── server.js          # HTTP server bootstrap and graceful shutdown
-│   ├── tests/                 # Unit and integration test suites
-│   ├── .env.example           # Template for required environment variables
+│   │   ├── config/       # Env validation and Redis/Redlock client
+│   │   ├── gateway/      # Auth, tenant resolution, and error middleware
+│   │   ├── db/           # Mongo connection manager and Mongoose schemas
+│   │   ├── ledger/       # Ledger routes, controllers, services, and schemas
+│   │   ├── analytics/    # Reporting and aggregation services
+│   │   ├── crypto/       # RSA key management and signing utilities
+│   │   ├── realtime/     # Socket.io event emitters and handlers
+│   │   ├── utils/        # App logger, custom errors, response formatting
+│   │   ├── app.js        # Express app initialization
+│   │   └── server.js     # Server entry point and graceful shutdown
+│   ├── tests/            # Integration and unit tests
+│   ├── .env.example
 │   └── package.json
 └── README.md
 ```
 
----
+## Setup & Local Development
 
-## 🚀 Getting Started
+### 1. Clone & Install Dependencies
 
-### 1. Prerequisites
-- Node.js >= 20.0.0
-- MongoDB instance (local or MongoDB Atlas)
-- Redis instance (local or cloud)
-
-### 2. Installation
 ```bash
-cd backend
+git clone https://github.com/YashG1195/ledger-guard.git
+cd ledger-guard/backend
 npm install
 ```
 
-### 3. Environment Configuration
-Copy `.env.example` to `.env` in the `backend/` directory:
+### 2. Generate Local RSA Keys
+
+The auth and crypto services expect RS256 keys in `backend/keys/`:
+
+```bash
+mkdir -p keys
+openssl genrsa -out keys/private.pem 2048
+openssl rsa -in keys/private.pem -pubout -out keys/public.pem
+```
+
+### 3. Spin Up Local Services (Docker)
+
+If you don't have MongoDB and Redis running locally:
+
+```bash
+docker run -d --name ledger-mongo -p 27017:27017 mongo:7
+docker run -d --name ledger-redis -p 6379:6379 redis:7-alpine
+```
+
+### 4. Configure Environment
+
+Create `.env` from the example file:
+
 ```bash
 cp .env.example .env
 ```
-Ensure all required environment variables are defined (`PORT`, `NODE_ENV`, `MONGO_BASE_URI`, `REDIS_URL`, `JWT_PRIVATE_KEY_PATH`, `JWT_PUBLIC_KEY_PATH`). The application validates configuration at startup via Zod and will fail fast if any required variables are missing.
 
-### 4. Running the Application
+Review values in `.env` to make sure ports, credentials, and key paths match your local setup.
+
+### 5. Start the Server
+
 ```bash
-# Development (with nodemon)
+# Development with automatic restart
 npm run dev
 
 # Production
@@ -74,17 +94,22 @@ npm start
 npm test
 ```
 
----
+## API Conventions
 
-## 🔒 Security & Response Standard
+### Response Envelope
 
-- **Tenant Isolation:** Enforced via `X-Tenant-Id` header or JWT tenant claims; database operations are dynamically scoped per tenant.
-- **Unified Response Contract:** All API endpoints respond in a consistent envelope:
-  ```json
-  {
-    "success": true,
-    "data": { ... },
-    "error": null
-  }
-  ```
-- **Error Handling:** Operational errors inherit from `AppError` and are safely mapped to client responses, while unexpected exceptions are logged with full stack traces and correlation IDs.
+All API endpoints return JSON payloads wrapped in a standard structure:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
+When an error occurs, `success` is `false`, `data` is `null`, and `error` contains `{ code, message, details }`.
+
+### Tenant Context
+
+LedgerGuard routes are multi-tenant. Requests must supply tenant context either via the `X-Tenant-Id` header or inside the JWT claims (`tenantId`). Database queries and WebSocket event channels are dynamically segmented using this identifier.

@@ -1,63 +1,30 @@
-/**
- * Redis-backed idempotency store.
- *
- * Idempotency-Key header format: any opaque string (UUID recommended).
- * Keys are namespaced per tenant so a key collision across tenants is impossible.
- *
- * Usage:
- *   const idempotency = new IdempotencyService(redisClient);
- *   const cached = await idempotency.get(tenantId, key);
- *   if (cached) return cached;
- *   const result = await doWork();
- *   await idempotency.set(tenantId, key, result);
- */
 export class IdempotencyService {
-  /**
-   * @param {import('ioredis').Redis} redis
-   * @param {number} [ttl=86400]  TTL in seconds (default 24 h)
-   */
-  constructor(redis, ttl = 86_400) {
+  constructor(redis, ttlSeconds = 86400) {
     this.redis = redis;
-    this.ttl = ttl;
+    this.ttl = ttlSeconds;
   }
 
-  #key(tenantId, idempotencyKey) {
+  buildKey(tenantId, idempotencyKey) {
     return `idempotency:${tenantId}:${idempotencyKey}`;
   }
 
-  /**
-   * Retrieve a previously stored response, or null if not found.
-   * @param {string} tenantId
-   * @param {string|null} idempotencyKey
-   * @returns {Promise<any|null>}
-   */
   async get(tenantId, idempotencyKey) {
     if (!idempotencyKey) return null;
-    const raw = await this.redis.get(this.#key(tenantId, idempotencyKey));
-    return raw ? JSON.parse(raw) : null;
+    const value = await this.redis.get(this.buildKey(tenantId, idempotencyKey));
+    return value ? JSON.parse(value) : null;
   }
 
-  /**
-   * Store a response under an idempotency key.
-   * @param {string} tenantId
-   * @param {string|null} idempotencyKey
-   * @param {any} response
-   */
-  async set(tenantId, idempotencyKey, response) {
+  async set(tenantId, idempotencyKey, payload) {
     if (!idempotencyKey) return;
     await this.redis.setex(
-      this.#key(tenantId, idempotencyKey),
+      this.buildKey(tenantId, idempotencyKey),
       this.ttl,
-      JSON.stringify(response)
+      JSON.stringify(payload)
     );
   }
 
-  /**
-   * Delete an idempotency entry (e.g., after a rollback).
-   * @param {string} tenantId
-   * @param {string} idempotencyKey
-   */
   async del(tenantId, idempotencyKey) {
-    await this.redis.del(this.#key(tenantId, idempotencyKey));
+    if (!idempotencyKey) return;
+    await this.redis.del(this.buildKey(tenantId, idempotencyKey));
   }
 }

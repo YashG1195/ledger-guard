@@ -1,15 +1,4 @@
-/**
- * Base class for all operational (expected) errors in the application.
- * Sets isOperational = true so the global error handler knows whether
- * to expose the message to the client.
- */
 export class AppError extends Error {
-  /**
-   * @param {string}  message    Human-readable description
-   * @param {number}  statusCode HTTP status code
-   * @param {string}  code       Machine-readable error code (snake_UPPER)
-   * @param {any}     [details]  Optional structured detail (e.g. zod field errors)
-   */
   constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', details = null) {
     super(message);
     this.name = this.constructor.name;
@@ -17,8 +6,6 @@ export class AppError extends Error {
     this.code = code;
     this.details = details;
     this.isOperational = true;
-
-    // Maintains proper stack trace in V8
     Error.captureStackTrace(this, this.constructor);
   }
 }

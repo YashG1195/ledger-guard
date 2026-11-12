@@ -3,60 +3,49 @@ import Redlock from 'redlock';
 import { env } from './env.js';
 import { logger } from '../utils/logger.js';
 
-// ── Singleton Redis client ───────────────────────────────────────────────────
-let _redis = null;
-let _redlock = null;
+let redisClient = null;
+let redlockClient = null;
 
 export function getRedis() {
-  if (_redis) return _redis;
+  if (redisClient) return redisClient;
 
-  _redis = new Redis(env.REDIS_URL, {
+  redisClient = new Redis(env.REDIS_URL, {
     maxRetriesPerRequest: 3,
     enableReadyCheck: true,
     lazyConnect: false,
   });
 
-  _redis.on('connect', () => logger.info('Redis connected'));
-  _redis.on('ready', () => logger.info('Redis ready'));
-  _redis.on('error', (err) => logger.error({ err }, 'Redis error'));
-  _redis.on('close', () => logger.warn('Redis connection closed'));
-  _redis.on('reconnecting', () => logger.warn('Redis reconnecting…'));
+  redisClient.on('connect', () => logger.info('redis connected'));
+  redisClient.on('ready', () => logger.info('redis ready'));
+  redisClient.on('error', (err) => logger.error({ err }, 'redis error'));
+  redisClient.on('close', () => logger.warn('redis connection closed'));
+  redisClient.on('reconnecting', () => logger.warn('redis reconnecting'));
 
-  return _redis;
+  return redisClient;
 }
 
-/**
- * Redlock — distributed mutual exclusion over Redis.
- *
- * Usage:
- *   const lock = await getRedlock().acquire(['locks:tenant:accountId'], 5000);
- *   try { ... } finally { await lock.release(); }
- */
 export function getRedlock() {
-  if (_redlock) return _redlock;
+  if (redlockClient) return redlockClient;
 
-  _redlock = new Redlock([getRedis()], {
-    // Retry acquiring a lock up to 3 times with exponential backoff
+  redlockClient = new Redlock([getRedis()], {
     retryCount: 3,
-    retryDelay: 200,   // ms
-    retryJitter: 100,  // ms
-    automaticExtensionThreshold: 500, // ms before expiry to auto-extend
+    retryDelay: 200,
+    retryJitter: 100,
+    automaticExtensionThreshold: 500,
   });
 
-  _redlock.on('error', (err) => {
-    // Only log — don't crash; callers handle LockError
-    logger.error({ err }, 'Redlock error');
+  redlockClient.on('error', (err) => {
+    logger.error({ err }, 'redlock error');
   });
 
-  return _redlock;
+  return redlockClient;
 }
 
 export async function disconnectRedis() {
-  if (_redis) {
-    await _redis.quit();
-    _redis = null;
-    _redlock = null;
-    logger.info('Redis disconnected');
+  if (redisClient) {
+    await redisClient.quit();
+    redisClient = null;
+    redlockClient = null;
+    logger.info('redis disconnected');
   }
 }
-

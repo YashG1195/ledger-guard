@@ -4,33 +4,28 @@ import { logger } from '../utils/logger.js';
 
 let isConnected = false;
 
-/**
- * Connect to MongoDB.
- * In a multi-tenant setup the base URI is shared; individual tenant databases
- * are selected at query time via mongoose.connection.useDb(tenantId).
- */
 export async function connectDB() {
   if (isConnected) return;
 
   try {
-    // Connect to the base URI — no specific database selected here
     await mongoose.connect(env.MONGO_BASE_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
     });
 
     isConnected = true;
-    logger.info({ uri: env.MONGO_BASE_URI }, 'MongoDB connected');
+    logger.info({ uri: env.MONGO_BASE_URI }, 'mongodb connected');
 
-    mongoose.connection.on('error', (err) =>
-      logger.error({ err }, 'MongoDB runtime error')
-    );
+    mongoose.connection.on('error', (err) => {
+      logger.error({ err }, 'mongodb runtime error');
+    });
+
     mongoose.connection.on('disconnected', () => {
       isConnected = false;
-      logger.warn('MongoDB disconnected');
+      logger.warn('mongodb disconnected');
     });
   } catch (err) {
-    logger.fatal({ err }, 'Failed to connect to MongoDB — shutting down');
+    logger.fatal({ err }, 'failed to connect to mongodb');
     process.exit(1);
   }
 }
@@ -39,13 +34,9 @@ export async function disconnectDB() {
   if (!isConnected) return;
   await mongoose.disconnect();
   isConnected = false;
-  logger.info('MongoDB connection closed');
+  logger.info('mongodb disconnected');
 }
 
-/**
- * Returns a tenant-scoped Mongoose connection.
- * @param {string} tenantId
- */
 export function getTenantDB(tenantId) {
   return mongoose.connection.useDb(`ledgerguard_${tenantId}`, { useCache: true });
 }

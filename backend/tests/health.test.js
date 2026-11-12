@@ -1,8 +1,3 @@
-/**
- * Integration tests for core app infrastructure.
- * Env vars are injected via tests/globalSetup.js (Jest globalSetup)
- * before any ESM module is evaluated.
- */
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 
@@ -13,7 +8,7 @@ describe('GET /health', () => {
     ({ app } = createApp());
   });
 
-  it('responds 200 with the standard success shape', async () => {
+  it('responds 200 with success status', async () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -41,7 +36,7 @@ describe('Unknown route', () => {
     ({ app } = createApp());
   });
 
-  it('returns 404 with the standard error shape', async () => {
+  it('returns 404 for missing route', async () => {
     const res = await request(app).get('/does-not-exist');
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);

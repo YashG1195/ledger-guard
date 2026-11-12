@@ -1,5 +1,3 @@
-// server.js is the process entry point.
-// Import order matters: env must be validated before anything else loads.
 import './config/env.js';
 
 import { createApp } from './app.js';
@@ -8,54 +6,45 @@ import { loadKeys } from './crypto/keys.js';
 import { logger } from './utils/logger.js';
 import { env } from './config/env.js';
 
-async function main() {
-  // 1. Load RSA keys (soft fail — features that need them will fail at request time)
+async function bootstrap() {
   loadKeys();
-
-  // 2. Connect to MongoDB
   await connectDB();
 
-  // 3. Create Express + Socket.io app
   const { httpServer } = createApp();
+  const port = Number(env.PORT) || 3000;
 
-  // 4. Bind to port
-  httpServer.listen(Number(env.PORT), () => {
-    logger.info(
-      { port: env.PORT, env: env.NODE_ENV },
-      `🚀  LedgerGuard started on port ${env.PORT}`
-    );
+  httpServer.listen(port, () => {
+    logger.info({ port, env: env.NODE_ENV }, `ledger-guard server listening on port ${port}`);
   });
 
-  // ─── Graceful shutdown ────────────────────────────────────────────────────
-  const shutdown = (signal) => {
-    logger.info({ signal }, 'Shutdown signal received — draining connections…');
+  const stop = (signal) => {
+    logger.info({ signal }, 'shutting down server');
     httpServer.close(() => {
-      logger.info('HTTP server closed cleanly');
+      logger.info('http server closed');
       process.exit(0);
     });
 
-    // Force-kill if shutdown hangs
     setTimeout(() => {
-      logger.error('Forced shutdown after timeout');
+      logger.error('force shutdown after timeout');
       process.exit(1);
-    }, 10_000).unref();
+    }, 10000).unref();
   };
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => stop('SIGTERM'));
+  process.on('SIGINT', () => stop('SIGINT'));
 
   process.on('uncaughtException', (err) => {
-    logger.fatal({ err }, 'uncaughtException — shutting down');
+    logger.fatal({ err }, 'uncaught exception');
     process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
-    logger.fatal({ reason }, 'unhandledRejection — shutting down');
+    logger.fatal({ reason }, 'unhandled rejection');
     process.exit(1);
   });
 }
 
-main().catch((err) => {
-  console.error('Fatal startup error:', err);
+bootstrap().catch((err) => {
+  logger.fatal({ err }, 'failed to start application');
   process.exit(1);
 });
