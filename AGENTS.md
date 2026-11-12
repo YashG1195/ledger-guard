@@ -9,3 +9,4 @@
   - Keep comments pragmatic and brief, explaining *why* a non-obvious decision was made (e.g. using minor currency units) rather than *what* basic syntax does.
   - Avoid generic numbered step-by-step TODO lists in comments.
 - Maintain consistent response envelopes (`{ success, data, error }`) and tenant isolation patterns across backend modules.
+

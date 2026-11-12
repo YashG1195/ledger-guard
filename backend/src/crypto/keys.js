@@ -1,26 +1,63 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { resolve, isAbsolute } from 'path';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 let privateKey = null;
 let publicKey = null;
 
+function resolveKeyPath(filePath) {
+  if (isAbsolute(filePath) && existsSync(filePath)) {
+    return filePath;
+  }
+  const directPath = resolve(process.cwd(), filePath);
+  if (existsSync(directPath)) return directPath;
+
+  const backendSubdir = resolve(process.cwd(), 'backend', filePath);
+  if (existsSync(backendSubdir)) return backendSubdir;
+
+  return directPath;
+}
+
 export function loadKeys() {
+  const privatePath = resolveKeyPath(env.JWT_PRIVATE_KEY_PATH);
+  const publicPath = resolveKeyPath(env.JWT_PUBLIC_KEY_PATH);
+
   try {
-    privateKey = readFileSync(resolve(env.JWT_PRIVATE_KEY_PATH), 'utf8');
-    logger.info({ path: env.JWT_PRIVATE_KEY_PATH }, 'loaded private rsa key');
+    privateKey = readFileSync(privatePath, 'utf8');
+    logger.info({ path: privatePath }, 'loaded private rsa key');
   } catch (err) {
-    logger.warn({ err }, 'could not load private rsa key');
+    logger.warn({ err, path: privatePath }, 'could not load private rsa key');
   }
 
   try {
-    publicKey = readFileSync(resolve(env.JWT_PUBLIC_KEY_PATH), 'utf8');
-    logger.info({ path: env.JWT_PUBLIC_KEY_PATH }, 'loaded public rsa key');
+    publicKey = readFileSync(publicPath, 'utf8');
+    logger.info({ path: publicPath }, 'loaded public rsa key');
   } catch (err) {
-    logger.warn({ err }, 'could not load public rsa key');
+    logger.warn({ err, path: publicPath }, 'could not load public rsa key');
   }
 }
 
-export const getPrivateKey = () => privateKey;
-export const getPublicKey = () => publicKey;
+export function getPrivateKey() {
+  if (!privateKey) {
+    const privatePath = resolveKeyPath(env.JWT_PRIVATE_KEY_PATH);
+    try {
+      privateKey = readFileSync(privatePath, 'utf8');
+    } catch {
+      return null;
+    }
+  }
+  return privateKey;
+}
+
+export function getPublicKey() {
+  if (!publicKey) {
+    const publicPath = resolveKeyPath(env.JWT_PUBLIC_KEY_PATH);
+    try {
+      publicKey = readFileSync(publicPath, 'utf8');
+    } catch {
+      return null;
+    }
+  }
+  return publicKey;
+}

@@ -11,6 +11,7 @@ import { errorHandler } from './gateway/errorHandler.js';
 
 import ledgerRoutes from './ledger/ledger.routes.js';
 import analyticsRoutes from './analytics/analytics.routes.js';
+import authRoutes from './gateway/auth.routes.js';
 import { initSocketIO } from './realtime/socketHandler.js';
 
 export function createApp() {
@@ -56,6 +57,8 @@ export function createApp() {
   });
 
   // domain routers
+  app.use('/auth', authRoutes);
+  app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/ledger', ledgerRoutes);
   app.use('/api/v1/analytics', analyticsRoutes);
 
