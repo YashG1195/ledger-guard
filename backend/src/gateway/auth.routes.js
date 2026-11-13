@@ -9,3 +9,4 @@ router.get('/mock-users', listMockUsers);
 router.get('/me', authGateway, getCurrentUser);
 
 export default router;
+

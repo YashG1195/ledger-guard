@@ -120,3 +120,4 @@ export function authGateway(req, res, next) {
     );
   }
 }
+

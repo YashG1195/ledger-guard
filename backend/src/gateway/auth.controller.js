@@ -107,3 +107,4 @@ export function listMockUsers(_req, res) {
 export function getCurrentUser(req, res) {
   return sendSuccess(res, { tenant: req.tenant });
 }
+
