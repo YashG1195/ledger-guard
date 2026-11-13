@@ -1,14 +1,14 @@
 import './config/env.js';
 
 import { createApp } from './app.js';
-import { connectDB } from './db/connectionManager.js';
+import { disconnectAll } from './db/connectionManager.js';
+import { disconnectRedis } from './config/redis.js';
 import { loadKeys } from './crypto/keys.js';
 import { logger } from './utils/logger.js';
 import { env } from './config/env.js';
 
 async function bootstrap() {
   loadKeys();
-  await connectDB();
 
   const { httpServer } = createApp();
   const port = Number(env.PORT) || 3000;
@@ -17,11 +17,18 @@ async function bootstrap() {
     logger.info({ port, env: env.NODE_ENV }, `ledger-guard server listening on port ${port}`);
   });
 
-  const stop = (signal) => {
+  const stop = async (signal) => {
     logger.info({ signal }, 'shutting down server');
-    httpServer.close(() => {
-      logger.info('http server closed');
-      process.exit(0);
+    httpServer.close(async () => {
+      try {
+        await disconnectAll();
+        await disconnectRedis();
+        logger.info('http server and database connections closed');
+        process.exit(0);
+      } catch (err) {
+        logger.error({ err }, 'error during graceful shutdown');
+        process.exit(1);
+      }
     });
 
     setTimeout(() => {

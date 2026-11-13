@@ -7,6 +7,8 @@ const envSchema = z.object({
   PORT: z.string().regex(/^\d+$/).default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   MONGO_BASE_URI: z.string({ required_error: 'MONGO_BASE_URI is required' }).min(1),
+  TENANT_CONNECTION_MAX_POOL_SIZE: z.coerce.number().int().positive().default(50),
+  TENANT_CONNECTION_IDLE_TIMEOUT_MINUTES: z.coerce.number().positive().default(10),
   REDIS_URL: z.string({ required_error: 'REDIS_URL is required' }).min(1),
   JWT_PRIVATE_KEY_PATH: z.string({ required_error: 'JWT_PRIVATE_KEY_PATH is required' }).min(1),
   JWT_PUBLIC_KEY_PATH: z.string({ required_error: 'JWT_PUBLIC_KEY_PATH is required' }).min(1),

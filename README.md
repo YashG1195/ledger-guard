@@ -112,4 +112,4 @@ When an error occurs, `success` is `false`, `data` is `null`, and `error` contai
 
 ### Tenant Context
 
-LedgerGuard routes are multi-tenant. Requests must supply tenant context either via the `X-Tenant-Id` header or inside the JWT claims (`tenantId`). Database queries and WebSocket event channels are dynamically segmented using this identifier.
+LedgerGuard routes are multi-tenant. Authenticated requests attach an isolated Mongoose connection to `req.db` for the database named `tenant_<orgId>`. Tenant-specific MongoDB URIs can be registered in the connection manager; otherwise the manager uses `MONGO_BASE_URI` with the tenant database name. Idle connections are evicted after `TENANT_CONNECTION_IDLE_TIMEOUT_MINUTES`, and the active cache is capped by `TENANT_CONNECTION_MAX_POOL_SIZE` using least-recently-used eviction. Database queries and WebSocket event channels are dynamically segmented using the tenant identifier.
