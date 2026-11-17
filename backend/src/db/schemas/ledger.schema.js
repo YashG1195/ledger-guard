@@ -4,49 +4,41 @@ const { Schema } = mongoose;
 
 const LedgerSchema = new Schema(
   {
-    name: {
+    accountId: {
       type: String,
-      required: [true, 'ledger name is required'],
+      required: [true, 'accountId is required'],
       trim: true,
-    },
-    orgId: {
-      type: String,
-      required: [true, 'orgId is required'],
-      index: true,
-    },
-    currency: {
-      type: String,
-      required: [true, 'currency is required'],
-      uppercase: true,
-      default: 'USD',
     },
     balance: {
       type: Number,
+      required: true,
       default: 0,
       validate: {
         validator: Number.isInteger,
-        message: 'balance must be in minor currency units',
+        message: 'balance must be an integer in cents',
       },
     },
-    status: {
-      type: String,
-      enum: ['ACTIVE', 'LOCKED', 'ARCHIVED'],
-      default: 'ACTIVE',
-      index: true,
+    version: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: 'version must be an integer',
+      },
     },
-    metadata: {
-      type: Schema.Types.Mixed,
-      default: {},
+    updatedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
-    timestamps: true,
     versionKey: false,
     collection: 'ledgers',
   }
 );
 
-LedgerSchema.index({ orgId: 1, name: 1 }, { unique: true });
+LedgerSchema.index({ accountId: 1 }, { unique: true, name: 'unique_account' });
 
 export default LedgerSchema;
-

@@ -62,8 +62,8 @@ const TransactionSchema = new Schema(
 );
 
 TransactionSchema.index(
-  { orgId: 1, idempotencyKey: 1 },
-  { unique: true, name: 'unique_org_idempotency' }
+  { idempotencyKey: 1 },
+  { unique: true, name: 'unique_idempotency_key' }
 );
 TransactionSchema.index({ orgId: 1, status: 1, createdAt: -1 });
 
