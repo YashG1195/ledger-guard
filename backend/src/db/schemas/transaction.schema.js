@@ -14,6 +14,11 @@ const TransactionSchema = new Schema(
       required: [true, 'orgId is required'],
       index: true,
     },
+    accountId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     amount: {
       type: Number,
       required: [true, 'amount is required'],
