@@ -2,7 +2,11 @@ import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger.js';
 import { getPublicKey } from '../crypto/keys.js';
 
+let ioInstance = null;
+
 export function initSocketIO(io) {
+  ioInstance = io;
+
   io.use((socket, next) => {
     const rawToken =
       socket.handshake.auth?.token ||
@@ -27,7 +31,7 @@ export function initSocketIO(io) {
 
   io.on('connection', (socket) => {
     const userId = socket.user?.sub || socket.user?.id || 'unknown';
-    const tenantId = socket.user?.tenantId;
+    const tenantId = socket.user?.tenantId || socket.user?.orgId;
 
     logger.info({ socketId: socket.id, userId, tenantId }, 'client connected to websocket');
 
@@ -41,6 +45,17 @@ export function initSocketIO(io) {
   });
 }
 
+export function getIO() {
+  return ioInstance;
+}
+
 export function emitToTenant(io, tenantId, event, data) {
+  if (!io || !tenantId) return;
   io.to(`tenant:${tenantId}`).emit(event, data);
+}
+
+export function emitTransactionUpdate(tenantId, payload) {
+  const io = ioInstance;
+  if (!io || !tenantId) return;
+  emitToTenant(io, tenantId, 'transaction:update', payload);
 }

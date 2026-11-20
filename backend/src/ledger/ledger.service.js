@@ -8,6 +8,7 @@ import {
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { TransactionSchema, LedgerSchema } from '../db/schemas/index.js';
+import { emitTransactionUpdate } from '../realtime/socketHandler.js';
 
 /**
  * Executes an atomic charge on a tenant ledger account protected by idempotency and distributed locking.
@@ -176,11 +177,17 @@ export async function processCharge(conn, params = {}) {
           createdAt: txDoc.createdAt,
           replayed: false,
         };
+
+        emitTransactionUpdate(orgId, {
+          transactionId: finalResult.transactionId,
+          status: 'completed',
+        });
       });
     } catch (txErr) {
       // 4. Transaction aborted automatically. Record Transaction as 'failed' OUTSIDE the transaction.
+      let failedTxId = cleanIdempotencyKey;
       try {
-        await Transaction.create([
+        const [failedDoc] = await Transaction.create([
           {
             idempotencyKey: cleanIdempotencyKey,
             orgId,
@@ -196,6 +203,7 @@ export async function processCharge(conn, params = {}) {
             },
           },
         ]);
+        if (failedDoc?._id) failedTxId = failedDoc._id.toString();
       } catch (recordErr) {
         // Fallback update if a document already exists under this idempotencyKey
         await Transaction.updateOne(
@@ -209,6 +217,11 @@ export async function processCharge(conn, params = {}) {
           }
         ).catch(() => {});
       }
+
+      emitTransactionUpdate(orgId, {
+        transactionId: failedTxId,
+        status: 'failed',
+      });
 
       throw txErr;
     } finally {

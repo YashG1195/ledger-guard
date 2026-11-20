@@ -20,6 +20,7 @@ export function createApp() {
   const io = new SocketIOServer(httpServer, {
     cors: { origin: env.CORS_ORIGIN },
   });
+  app.set('io', io);
 
   // security and parser middleware
   app.use(helmet());
@@ -59,6 +60,7 @@ export function createApp() {
   // domain routers
   app.use('/auth', authRoutes);
   app.use('/api/v1/auth', authRoutes);
+  app.use('/ledger', ledgerRoutes);
   app.use('/api/v1/ledger', ledgerRoutes);
   app.use('/api/v1/analytics', analyticsRoutes);
 
