@@ -8,13 +8,14 @@ export const createTransaction = asyncHandler(async (req, res) => {
     req.tenantId,
     req.body,
     idempotencyKey,
-    req.log
+    req.log,
+    req.db
   );
   sendSuccess(res, result, 201);
 });
 
 export const listTransactions = asyncHandler(async (req, res) => {
-  const result = await ledgerService.listTransactions(req.tenantId, req.query, req.log);
+  const result = await ledgerService.listTransactions(req.tenantId, req.query, req.log, req.db);
   sendSuccess(res, result);
 });
 
@@ -22,7 +23,8 @@ export const getTransaction = asyncHandler(async (req, res) => {
   const result = await ledgerService.getTransactionById(
     req.tenantId,
     req.params.id,
-    req.log
+    req.log,
+    req.db
   );
   sendSuccess(res, result);
 });

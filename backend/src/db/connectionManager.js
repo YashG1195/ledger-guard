@@ -67,7 +67,7 @@ export class ConnectionManager {
       return { uri: customUri, dbName };
     }
 
-    return { uri: env.MONGO_BASE_URI, dbName };
+    return { uri: process.env.MONGO_BASE_URI || env.MONGO_BASE_URI, dbName };
   }
 
   /**

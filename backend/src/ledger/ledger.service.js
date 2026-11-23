@@ -242,8 +242,22 @@ export async function processCharge(conn, params = {}) {
   }
 }
 
-export async function createTransaction(tenantId, data, idempotencyKey, log) {
+export async function createTransaction(tenantId, data, idempotencyKey, log, db) {
   log?.info({ tenantId, idempotencyKey }, 'creating transaction');
+  if (db?.models?.Transaction) {
+    const Transaction = db.models.Transaction;
+    const doc = await Transaction.create({
+      idempotencyKey: idempotencyKey || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      orgId: tenantId,
+      accountId: data?.accountId || `acc_${tenantId}`,
+      amount: data?.amount || 100,
+      currency: data?.currency || 'USD',
+      type: data?.type || 'charge',
+      status: data?.status || 'completed',
+      metadata: data?.metadata || {},
+    });
+    return doc.toObject ? doc.toObject() : doc;
+  }
   return {
     status: 'pending',
     tenantId,
@@ -251,17 +265,37 @@ export async function createTransaction(tenantId, data, idempotencyKey, log) {
   };
 }
 
-export async function listTransactions(tenantId, query, log) {
+export async function listTransactions(tenantId, query, log, db) {
   log?.info({ tenantId, query }, 'listing transactions');
+  if (db?.models?.Transaction) {
+    const Transaction = db.models.Transaction;
+    const page = Math.max(1, Number(query?.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query?.limit) || 20));
+    const items = await Transaction.find({ orgId: tenantId })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+    const total = await Transaction.countDocuments({ orgId: tenantId });
+    return { items, total, page, limit };
+  }
   return {
     items: [],
     total: 0,
-    page: Number(query.page) || 1,
-    limit: Number(query.limit) || 20,
+    page: Number(query?.page) || 1,
+    limit: Number(query?.limit) || 20,
   };
 }
 
-export async function getTransactionById(tenantId, id, log) {
+export async function getTransactionById(tenantId, id, log, db) {
   log?.info({ tenantId, id }, 'fetching transaction by id');
+  if (db?.models?.Transaction) {
+    const Transaction = db.models.Transaction;
+    const tx = await Transaction.findOne({ _id: id, orgId: tenantId }).lean();
+    if (!tx) {
+      throw new NotFoundError(`Transaction ${id} not found`);
+    }
+    return tx;
+  }
   throw new NotFoundError(`Transaction ${id} not found`);
 }

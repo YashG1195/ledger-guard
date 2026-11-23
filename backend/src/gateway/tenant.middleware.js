@@ -5,7 +5,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 export { tenantContext };
 
 export const resolveTenant = asyncHandler(async (req, _res, next) => {
-  const tenantId = req.tenant?.orgId || req.user?.tenantId || req.headers['x-tenant-id'];
+  // Tenancy must only derive from the verified JWT payload, never from untrusted headers or inputs
+  const tenantId = req.tenant?.orgId || req.user?.tenantId;
 
   if (!tenantId || typeof tenantId !== 'string' || !tenantId.trim()) {
     throw new ForbiddenError('Tenant context is required');
