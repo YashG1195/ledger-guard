@@ -51,11 +51,12 @@ describe('ConnectionManager', () => {
     expect(first).toBe(second);
     expect(createConnection).toHaveBeenCalledTimes(1);
     expect(connections[0].options.dbName).toBe('tenant_org-one');
-    expect(connections[0].model).toHaveBeenCalledTimes(3);
+    expect(connections[0].model).toHaveBeenCalledTimes(4);
     expect(Object.keys(connections[0].models)).toEqual([
       'Ledger',
       'Transaction',
       'UsageEvent',
+      'TenantSettings',
     ]);
   });
 

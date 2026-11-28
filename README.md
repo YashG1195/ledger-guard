@@ -92,7 +92,27 @@ npm start
 
 # Run tests
 npm test
+
+# Seed usage events (default demo tenants)
+npm run seed
 ```
+
+### 6. Seed Usage Data
+
+Generate 6 months of realistic usage events per tenant using dedicated tenant connections:
+
+```bash
+# Seed default tenants
+npm run seed
+
+# Seed a specific tenant
+npm run seed -- --tenant org_acme
+
+# Seed multiple tenants and clear previous usage data
+npm run seed -- --tenant org_acme,org_globex --reset
+```
+
+The seeder connects via `ConnectionManager` to keep tenant databases strictly isolated. Costs are saved as integer cents across `api_calls`, `storage`, `compute`, and `bandwidth`, modeling higher weekday volumes, a steady upward 6-month growth trend, and periodic load spikes.
 
 ## API Conventions
 

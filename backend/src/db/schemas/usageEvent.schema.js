@@ -32,5 +32,7 @@ const UsageEventSchema = new Schema(
 );
 
 UsageEventSchema.index({ timestamp: -1 });
+UsageEventSchema.index({ orgId: 1, timestamp: -1 });
+UsageEventSchema.index({ orgId: 1, resource: 1, timestamp: -1 });
 
 export default UsageEventSchema;
